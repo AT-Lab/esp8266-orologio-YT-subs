@@ -148,8 +148,7 @@ int  YTSubs_centinaia;
 int  YTSubs_migliaia;
 int  YTSubs_dmigliaia;
 
-// Temperatura ottenuta da OpenWeatherMap
-float temp_owm;
+// Temperatura default
 float temp = 20;
 
 // Oridine con cui mostrare i messaggi sul display, 3 sec per step
@@ -171,9 +170,6 @@ int readLux();
 
 // Aggiorna il conteggio degli iscritti
 void UpdateSubs();
-
-// Legge la temperatura da OpenWeatherMap
-void readThermOWM();
 
 // Cosa scrivere sul display
 int ascii2int(char *buf);
@@ -336,12 +332,6 @@ void loop() {
   while (millis() - startTime < 25);
 
   playAlarm();
-  //readTherm();
-
-  // Aggiorna temperatura OWM ogni minuto
-//  if ((millis() - startTime) / (1000 * 60) ) {
-//    readThermOWM();
-//  }
 
 }
 
