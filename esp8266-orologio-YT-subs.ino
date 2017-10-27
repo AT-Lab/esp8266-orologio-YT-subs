@@ -1,7 +1,8 @@
 /*
    Autore: AT Lab
    Descrizione: Sveglia/contatore iscritti, termometro per stanza realizzato con l'esp8266
-   Link: (link video youtube)
+   Parte del codice è stata presa dal canale https://www.youtube.com/user/cbm80amiga
+   Link: https://youtu.be/SporerZgHHs
 
    CONNECTIONS:
    pin 15/D8 -> MAX7219 DataIn
