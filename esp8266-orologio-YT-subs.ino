@@ -151,6 +151,7 @@ int  YTSubs_dmigliaia;
 
 // Temperatura default
 float temp = 20;
+float thermAverage = 0; 
 
 // Oridine con cui mostrare i messaggi sul display, 3 sec per step
 // Array di 20 per riempire un intero minuto
