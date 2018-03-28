@@ -98,7 +98,7 @@ MAX7219 max7219(NUM_MAX, DIN_PIN, CS_PIN, CLK_PIN);
 static const char ntpServerName[] = "2.it.pool.ntp.org";
 unsigned int localPort = 8888;  // local port to listen for UDP packets
 const int NTP_PACKET_SIZE = 48; // NTP time is in the first 48 bytes of message
-const int timeZone = 2;     // Central European Time
+int timezone = 1;
 byte packetBuffer[NTP_PACKET_SIZE]; //buffer to hold incoming & outgoing packets
 
 // Lux sensors mean
@@ -141,6 +141,7 @@ char charBuf[7];
 // Allarme di default
 int hourAlarm = -1, minuteAlarm = -1;
 int alarmtoday = 0;
+int alarm_on = 0;
 
 // YT iscritti divisi in singole cifre per mostrarli con un font custom
 int  YTSubs_unita;
@@ -216,7 +217,7 @@ void setup() {
   Blynk.begin(auth, ssid, pass);
 
   Udp.begin(localPort);
-
+  
   setSyncProvider(updateNtpTime);
   setSyncInterval(UPDATE_NTP);
   max7219.clr();
@@ -233,12 +234,9 @@ void setup() {
 void loop() {
 
   Blynk.run();
-  BLYNK_WRITE(V1);
-  BLYNK_READ(V2);
-  BLYNK_READ(V3);
 
   startTime = millis();
-
+  
   // legge la luminosita e ottiene la media delle misurazioni precedenti
   luxTotal = luxTotal - luxReadings[readIndexLux];
   luxReadings[readIndexLux] = readLux();
@@ -429,7 +427,7 @@ time_t updateNtpTime() {
       secsSince1900 |= (unsigned long)packetBuffer[41] << 16;
       secsSince1900 |= (unsigned long)packetBuffer[42] << 8;
       secsSince1900 |= (unsigned long)packetBuffer[43];
-      return secsSince1900 - 2208988800UL + timeZone * SECS_PER_HOUR;
+      return secsSince1900 - 2208988800UL + (timezone * 3600) + dstOffset(secsSince1900);
     }
   }
 
@@ -645,7 +643,7 @@ void playAlarm() {
     alarmCnt--;
     suonaSuoneria(melody10, noteDurations10, 2000, 1.00, (sizeof(melody10) / sizeof(melody10[0])));
     suonaSuoneria(melody10, noteDurations10, 2000, 1.00, (sizeof(melody10) / sizeof(melody10[0])));
-    // da implementare spegnere la sveglia con il bottone
+    // TODO: spegnere la sveglia con il bottone
   }
 }
 
@@ -674,8 +672,17 @@ void spegniLed (int n) {
     case 7: ; Blynk.virtualWrite(V10, 0); break;
   }
 }
+BLYNK_WRITE(V0) {
+    //pulsante per spegnere tutte le sveglie
+    alarm_on = param.asInt();
+    for (int i = 1; i <= 7; i++) {
+    if (!alarm_on) {
+      spegniLed(i);}
+}
+}
 
 BLYNK_WRITE(V1) {
+  //timeInput
   TimeInputParam t(param);
   hourAlarm = t.getStartHour();
   minuteAlarm = t.getStartMinute();
@@ -685,7 +692,7 @@ BLYNK_WRITE(V1) {
   Serial.println();
 #endif
   for (int i = 1; i <= 7; i++) {
-    if (t.isWeekdaySelected(i)) {
+    if (t.isWeekdaySelected(i) && alarm_on) {
 #ifdef DEBUG_SERIAL
       Serial.println(String("Day ") + i + " is selected");
 #endif
@@ -695,12 +702,13 @@ BLYNK_WRITE(V1) {
       spegniLed(i);
     }
   }
-  if (t.isWeekdaySelected(dw)) {
+  if (t.isWeekdaySelected(dw) && alarm_on) {
     alarmtoday = 1;
   }
   else {
     alarmtoday = 0;
   }
+  
 }
 
 BLYNK_READ(V2) {
@@ -709,4 +717,22 @@ BLYNK_READ(V2) {
 
 BLYNK_READ(V3) {
   Blynk.virtualWrite(V3, minuteAlarm);
+}
+
+int dstOffset (unsigned long unixTime)
+{
+  //Fornisce un offset per la gestione dell'ora solare e dell'ora legale
+  time_t t = unixTime;
+  int beginDSTDay = (14 - (1 + year(t) * 5 / 4) % 7);  
+  int beginDSTMonth=3;
+  int endDSTDay = (7 - (1 + year(t) * 5 / 4) % 7);
+  int endDSTMonth=11;
+  if (((month(t) > beginDSTMonth) && (month(t) < endDSTMonth))
+    || ((month(t) == beginDSTMonth) && (day(t) > beginDSTDay))
+    || ((month(t) == beginDSTMonth) && (day(t) == beginDSTDay) && (hour(t) >= 2))
+    || ((month(t) == endDSTMonth) && (day(t) < endDSTDay))
+    || ((month(t) == endDSTMonth) && (day(t) == endDSTDay) && (hour(t) < 1)))
+    return (3600);  //Add back in one hours worth of seconds - DST in effect
+  else
+    return (0);  //NonDST
 }
